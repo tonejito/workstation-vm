@@ -4,18 +4,18 @@ cert_path=/home/student/DO380/labs/certificates-review
 
 lab certificates-review start
 
-oc create configmap review-bundle --from-file ca-bundle.crt=${cert_path}/review-combined.pem -n openshift-config
-oc patch proxy/cluster --type=merge -p '{"spec":{"trustedCA":{"name":"review-bundle"}}}'
+sudo oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify create configmap review-bundle --from-file ca-bundle.crt=${cert_path}/review-combined.pem -n openshift-config
+sudo oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify patch proxy/cluster --type=merge -p '{"spec":{"trustedCA":{"name":"review-bundle"}}}'
 
-oc create secret tls review-tls --cert ${cert_path}/review-combined.pem --key ${cert_path}/review-key.pem -n openshift-ingress
-oc patch ingresscontroller.operator default --type=merge -p '{"spec":{"defaultCertificate": {"name": "review-tls"}}}' -n openshift-ingress-operator
+sudo oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify create secret tls review-tls --cert ${cert_path}/review-combined.pem --key ${cert_path}/review-key.pem -n openshift-ingress
+sudo oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify patch ingresscontroller.operator default --type=merge -p '{"spec":{"defaultCertificate": {"name": "review-tls"}}}' -n openshift-ingress-operator
 
 # Not creating the secret simulates a problem that a student created.
 # In this scenario, the admin and kubeadmin users should be locked out.
 # Running 'oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify' should still work, but students do not have this information.
 # Although grading will fail, the finish function *should* still clean up appropriately.
-#oc create secret tls review-tls --cert ${cert_path}/review-combined.pem --key ${cert_path}/review-key.pem -n openshift-config
-oc patch apiserver cluster --type=merge -p '{"spec":{"servingCerts": {"namedCertificates": [{"names": ["api.ocp4.example.com"], "servingCertificate": {"name": "review-tls"}}]}}}'
+#sudo oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify create secret tls review-tls --cert ${cert_path}/review-combined.pem --key ${cert_path}/review-key.pem -n openshift-config
+sudo oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify patch apiserver cluster --type=merge -p '{"spec":{"servingCerts": {"namedCertificates": [{"names": ["api.ocp4.example.com"], "servingCertificate": {"name": "review-tls"}}]}}}'
 
 echo "Sleeping for 2 minutes"
 sleep 120
