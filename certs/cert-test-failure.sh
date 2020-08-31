@@ -42,6 +42,3 @@ lab certificates-review grade
 # The lab_finish function should wait until 'co/kube-apiserver' starts progressing.
 # Hopefully this does successfully revert the cluster.
 lab certificates-review finish
-
-# The ocp4_login_as_admin function should fail with a message indicating that 'co/kube-apiserver' is progressing.
-lab pools-adding-workers start

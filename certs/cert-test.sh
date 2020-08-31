@@ -38,4 +38,6 @@ lab certificates-review grade
 lab certificates-review finish
 
 # The ocp4_login_as_admin function should fail with a message indicating that 'co/kube-apiserver' is progressing.
+# Although ocp4_login_as_admin fails, the lab_start function continues.
+# Should a generic `ocp4_exit_on_failure` be added right after every `ocp4_login_as_admin`?
 lab pools-adding-workers start
