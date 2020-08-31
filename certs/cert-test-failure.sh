@@ -21,7 +21,7 @@ echo "Sleeping for 2 minutes"
 sleep 120
 echo "Waiting for 'co/kube-apiserver' to stop progressing"
 
-local API_PROGRESSING="true"
+API_PROGRESSING="true"
 until [ "${API_PROGRESSING,,}" == "false" ]
 do
   API_PROGRESSING=$(sudo oc --kubeconfig /root/.kubeconfig --insecure-skip-tls-verify get co/kube-apiserver -o jsonpath='{range .status.conditions[?(@.type=="Progressing")]}{.status}{end}')
