@@ -1,0 +1,474 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+<!ENTITY % common_entities SYSTEM "../../../common.ent">
+%common_entities;
+]>
+
+<section role="Test" id="auth-review">
+  <!-- Sections should have an id that is a short version of the title. -->
+  <title>Configuring Authentication and Authorization</title>
+
+  <task role="Lab" id="auth-review-lab">
+    <!-- Tasks should have an id that is a short version of the topic. -->
+    <title>Cannot be empty, but is ignored</title>
+
+    <tasksummary>
+      <formalpara>
+        <title>Performance Checklist</title>
+        <para>
+          In this lab, you will configure the HTPasswd identity provider, create groups, and assign roles to users and groups.
+        </para>
+      </formalpara>
+
+      <formalpara>
+        <title>Outcomes</title>
+        <para>
+          You should be able to:
+        </para>
+      </formalpara>
+      <itemizedlist>
+        <listitem>
+          <para>
+            Create users and passwords for HTPasswd authentication.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Configure the Identity Provider for HTPasswd authentication.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Assign cluster administration rights to users.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Remove the ability to create projects at the cluster level.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Create groups, and add users to groups.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Manage user privileges in projects by granting privileges to groups.
+          </para>
+        </listitem>
+      </itemizedlist>
+    </tasksummary>
+    <taskprerequisites>
+      <para>
+        To perform this lab, ensure you have access to:
+      </para>
+      <itemizedlist>
+        <listitem>
+          <para>
+            A running OpenShift cluster.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            The OpenShift CLI (<code>/usr/local/bin/oc</code>)
+          </para>
+        </listitem>
+      </itemizedlist>
+      <para>
+        On <code>workstation</code>, run the following <code>lab</code> command to prepare your system for the lab.
+      </para>
+      <screen><prompt>[student@workstation ~]$ </prompt><code>lab auth-review start</code></screen>
+      <para>
+        The command ensures that the cluster API is reachable, the <code>httpd-util</code> package is installed, and the authentication settings are configured to installation defaults.
+      </para>
+    </taskprerequisites>
+   <procedure>
+
+      <step>
+        <para>
+          Update the existing <code>~/DO280/labs/auth-review/tmp_users</code> HTPasswd authentication file to remove the <code>analyst</code> user.
+          Ensure that the <code>tester</code> and <code>leader</code> users in the file use a password of <code>L@bR3v!ew</code>.
+          Add two new entries to the file for the users <code>admin</code> and <code>developer</code>.
+          Use <code>L@bR3v!ew</code> as the password for each new user.
+        </para>
+
+        <substeps role="solution">
+          <step>
+            <para>
+              Remove the <code>analyst</code> user from the <code>~/DO280/labs/auth-review/tmp_users</code> HTPasswd authentication file.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>htpasswd -D ~/DO280/labs/auth-review/tmp_users analyst</userinput>
+Deleting password for user analyst</screen>
+          </step>
+          <step>
+            <para>
+              Update the entries for the <code>tester</code> and <code>leader</code> users so that they use a password of <code>L@bR3v!ew</code>.
+              Add entries for the <code>admin</code> and <code>developer</code> users using a password of <code>L@bR3v!ew</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>for NAME in tester leader admin developer</userinput>
+<prompt>&gt; </prompt>   <userinput>do</userinput>
+<prompt>&gt; </prompt>   <userinput>htpasswd -b ~/DO280/labs/auth-review/tmp_users ${NAME} 'L@bRev!ew'</userinput>
+<prompt>&gt; </prompt>   <userinput>done</userinput>
+Updating password for user tester
+Updating password for user leader
+Adding password for user admin
+Adding password for user developer</screen>
+          </step>
+
+          <step>
+            <para>
+              Review the contents of the <code>~/DO280/labs/auth-review/tmp_users</code> file.
+              It does not contain a line for the <code>analyst</code> user.
+              It includes two new entries with hashed passwords for the <code>admin</code> and <code>developer</code> users.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>cat ~/DO280/labs/auth-review/tmp_users</userinput>
+tester:$apr1$0eqhKgbU$DWd0CB4IumhasaRuEr6hp0
+leader:$apr1$.EB5IXlu$FDV.Av16njlOCMzgolScr/
+<code>admin:$apr1$ItcCncDS$xFQCUjQGTsXAup00KQfmw0</code>
+<code>developer:$apr1$D8F1Hren$izDhAWq5DRjUHPv0i7FHn.</code></screen>
+          </step>
+        </substeps>
+      </step>
+
+      <step>
+        <para>
+          Log in to your OpenShift cluster as the <code>kubeadmin</code> user using the <code>RHT_OCP4_KUBEADM_PASSWD</code> variable defined in the <code>/usr/local/etc/ocp4.config</code> file as the password.
+          Configure your cluster to use the HTPasswd identity provider using the user names and passwords defined in the <code>~/DO280/labs/auth-review/tmp_users</code> file.
+        </para>
+
+        <substeps role="solution">
+          <step>
+            <para>
+              Source the classroom configuration file that is accessible at <code>/usr/local/etc/ocp4.config</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>source /usr/local/etc/ocp4.config</userinput></screen>
+          </step>
+
+          <step>
+            <para>
+              Log in to the cluster as the <code>kubeadmin</code> user.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc login -u kubeadmin -p ${RHT_OCP4_KUBEADM_PASSWD} \</userinput>
+<prompt>&gt; </prompt>   <userinput>https://api.ocp4.example.com:6443</userinput>
+Login successful.
+<emphasis>...output omitted...</emphasis></screen>
+          </step>
+
+          <step>
+            <para>
+              Create a secret named <code>auth-review</code> using the <code>~/DO280/labs/auth-review/tmp_users</code> file.
+            </para>
+
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc create secret generic auth-review \</userinput>
+<prompt>&gt; </prompt>   <userinput>--from-file htpasswd=/home/student/DO280/labs/auth-review/tmp_users \</userinput>
+<prompt>&gt; </prompt>   <userinput>-n openshift-config</userinput>
+secret/auth-review created</screen>
+          </step>
+
+          <step>
+            <para>
+              Export the existing OAuth resource to <code>~/DO280/labs/auth-review/oauth.yaml</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc get oauth cluster \</userinput>
+<prompt>&gt; </prompt>   <userinput>-o yaml > ~/DO280/labs/auth-review/oauth.yaml</userinput></screen>
+          </step>
+
+          <step>
+            <para>
+              Edit the <code>~/DO280/labs/auth-review/oauth.yaml</code> file to replace the <code>spec: {}</code> line with the following bold lines.
+              Note that <code>htpasswd</code>, <code>mappingMethod</code>, <code>name</code> and <code>type</code> are at the same indentation level.
+            </para>
+
+<screen>apiVersion: config.openshift.io/v1
+kind: OAuth
+<emphasis>...output omitted...</emphasis>
+<code>spec:</code>
+  <code>identityProviders:</code>
+  <code>- htpasswd:</code>
+      <code>fileData:</code>
+        <code>name: auth-review</code>
+    <code>mappingMethod: claim</code>
+    <code>name: htpasswd</code>
+    <code>type: HTPasswd</code></screen>
+            <note>
+              <para>
+                For convenience, the <code>~/DO280/solutions/auth-review/oauth.yaml</code> file contains a minimal version of the OAuth configuration with the specified customizations.
+              </para>
+            </note>
+          </step>
+
+          <step>
+            <para>
+              Apply the customized resource defined in the previous step.
+            </para>
+<screen><prompt>[student@workstation ~]$ </prompt><userinput>oc replace -f ~/DO280/labs/auth-review/oauth.yaml</userinput>
+oauth.config.openshift.io/cluster replaced</screen>
+          </step>
+
+          <step>
+            <para>
+              A successful update to the <code>oauth/cluster</code> resource recreates the <code>oauth-openshift</code> pods in the <code>openshift-authentication</code> namespace.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>watch oc get pods -n openshift-authentication</userinput></screen>
+            <para>
+              Wait until both new <code>oauth-openshift</code> pods are ready and running and the previous pods have finished terminating.
+            </para>
+            <screen>Every 2.0s: oc get pods -n openshift-authentication            ...
+
+NAME                              READY   STATUS    RESTARTS   AGE
+oauth-openshift-6755d8795-h8bgv   1/1     Running   0          34s
+oauth-openshift-6755d8795-rk4m6   1/1     Running   0          38s</screen>
+            <para>
+              Press <keycombo><keycap>Ctrl</keycap><keycap>C</keycap></keycombo> to exit the <code>watch</code> command.
+            </para>
+          </step>
+        </substeps>
+      </step>
+
+      <step>
+        <para>
+          Make the <code>admin</code> user a cluster administrator.
+          Log in as both <code>admin</code> and as <code>developer</code> to verify HTPasswd user configuration and cluster privileges.
+        </para>
+
+        <substeps role="solution">
+          <step>
+            <para>
+              Assign the <code>admin</code> user the <code>cluster-admin</code> role.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm policy add-cluster-role-to-user \</userinput>
+<prompt>&gt; </prompt>   <userinput>cluster-admin admin</userinput>
+Warning: User 'admin' not found
+clusterrole.rbac.authorization.k8s.io/cluster-admin added: "admin"</screen>
+            <note>
+              <para>
+                You can safely ingore the warning.
+                This type of warning displays when you assign a role to user resource that does not exist in your cluster.
+                By default, the user resource is created the first time the user logs in to the cluster.
+              </para>
+            </note>
+          </step>
+          <step>
+            <para>
+              Log in to the cluster as the <code>admin</code> user to verify that HTPasswd authentication was configured correctly.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc login -u admin -p 'L@bR3v!ew'</userinput>
+Login successful.
+<emphasis>...output omitted...</emphasis></screen>
+          </step>
+          <step>
+            <para>
+              Use <code>oc get nodes</code> command to verify the <code>admin</code> user has the <code>cluster-admin</code> role.
+              The names of the nodes from your cluster might be different.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc get nodes</userinput>
+NAME       STATUS   ROLES           AGE   VERSION
+master01   Ready    master,worker   46d   v1.18.3+012b3ec
+master02   Ready    master,worker   46d   v1.18.3+012b3ec
+master03   Ready    master,worker   46d   v1.18.3+012b3ec</screen>
+          </step>
+          <step>
+            <para>
+              Log in to the cluster as the <code>developer</code> user to verify the HTPasswd authentication was configured correctly.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc login -u developer -p 'L@bR3v!ew'</userinput>
+Login successful.
+<emphasis>...output omitted...</emphasis></screen>
+          </step>
+          <step>
+            <para>
+              Use the <code>oc get nodes</code> command to verify that the <code>developer</code> user does not have cluster administration privileges.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc get nodes</userinput>
+Error from server (Forbidden): nodes is forbidden: User "developer" cannot list
+resource "nodes" in API group "" at the cluster scope</screen>
+          </step>
+
+        </substeps>
+      </step>
+
+      <step>
+        <para>
+          As the <code>admin</code> user, remove the ability to create projects cluster wide.
+        </para>
+
+        <substeps role="solution">
+          <step>
+            <para>
+              Log in to the cluster as the <code>admin</code> user.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc login -u admin -p 'L@bR3v!ew'</userinput>
+Login successful.
+<emphasis>...output omitted...</emphasis></screen>
+          </step>
+
+          <step>
+            <para>
+              Remove the <code>self-provisioner</code> cluster role from the <code>system:authenticated:oauth</code> virtual group.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm policy remove-cluster-role-from-group  \</userinput>
+<prompt>&gt; </prompt>   <userinput>self-provisioner system:authenticated:oauth</userinput>
+Warning: Your changes may get lost whenever a master is restarted, unless you prevent reconciliation of this rolebinding using the following command: oc annotate clusterrolebinding.rbac self-provisioner 'rbac.authorization.kubernetes.io/autoupdate=false' --overwrite
+clusterrole.rbac.authorization.k8s.io/self-provisioner removed: "system:authenticated:oauth"</screen>
+          <note>
+            <para>
+              You can safely ignore the warning about your changes being lost.
+            </para>
+          </note>
+
+          </step>
+        </substeps>
+      </step>
+
+      <step>
+        <para>
+          Create a group named <code>managers</code>, and add the <code>leader</code> user to the group.
+          Grant project creation privileges to the <code>managers</code> group.
+          As the <code>leader</code> user, create the <code>auth-review</code> project.
+        </para>
+
+        <substeps role="solution">
+
+          <step>
+            <para>
+              Create a group named <code>managers</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm groups new managers</userinput>
+group.user.openshift.io/managers created</screen>
+          </step>
+
+          <step>
+            <para>
+              Add the <code>leader</code> user to the <code>managers</code> group.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm groups add-users managers leader</userinput>
+group.user.openshift.io/managers added: "leader"</screen>
+          </step>
+
+          <step>
+            <para>
+              Assign the <code>self-provisioner</code> cluster role to the <code>managers</code> group.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm policy add-cluster-role-to-group  \</userinput>
+<prompt>&gt; </prompt>   <userinput>self-provisioner managers</userinput>
+clusterrole.rbac.authorization.k8s.io/self-provisioner added: "managers"</screen>
+          </step>
+
+          <step>
+            <para>
+              As the <code>leader</code> user, create the <code>auth-review</code> project.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc login -u leader -p 'L@bR3v!ew'</userinput>
+Login successful.
+<emphasis>...output omitted...</emphasis></screen>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc new-project auth-review</userinput>
+Now using project "auth-review" on server "https://api.ocp4.example.com:6443".
+<emphasis>...output omitted...</emphasis></screen>
+          </step>
+        </substeps>
+      </step>
+
+      <step>
+        <para>
+          Create a group named <code>developers</code> and grant edit privileges on the <code>auth-review</code> project.
+          Add the <code>developer</code> user to the group.
+        </para>
+
+        <substeps role="solution">
+          <step>
+            <para>
+              Log in to the cluster as the <code>admin</code> user.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc login -u admin -p 'L@bR3v!ew'</userinput>
+Login successful.
+<emphasis>...output omitted...</emphasis></screen>
+          </step>
+
+          <step>
+            <para>
+              Create a group named <code>developers</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm groups new developers</userinput>
+group.user.openshift.io/developers created</screen>
+          </step>
+
+          <step>
+            <para>
+              Add the <code>developer</code> user to <code>developers</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm groups add-users developers developer</userinput>
+group.user.openshift.io/developers added: "developer"</screen>
+          </step>
+
+          <step>
+            <para>
+              Grant edit privileges to the <code>developers</code> group on the <code>auth-review</code> project.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc policy add-role-to-group edit developers</userinput>
+clusterrole.rbac.authorization.k8s.io/edit added: "developers"</screen>
+
+          </step>
+        </substeps>
+      </step>
+
+      <step>
+        <para>
+          Create a group named <code>qa</code> and grant view privileges on the <code>auth-review</code> project.
+          Add the <code>tester</code> user to the group.
+        </para>
+
+        <substeps role="solution">
+
+          <step>
+            <para>
+              Create a group named <code>qa</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm groups new qa</userinput>
+group.user.openshift.io/qa created</screen>
+          </step>
+
+          <step>
+            <para>
+              Add the <code>tester</code> user to <code>qa</code>.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc adm groups add-users qa tester</userinput>
+group.user.openshift.io/qa added: "tester"</screen>
+          </step>
+
+          <step>
+            <para>
+              Grant view privileges to the <code>qa</code> group on the <code>auth-review</code> project.
+            </para>
+            <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc policy add-role-to-group view qa</userinput>
+clusterrole.rbac.authorization.k8s.io/view added: "qa"</screen>
+          </step>
+        </substeps>
+      </step>
+    </procedure>
+
+    <taskrelated>
+
+      <formalpara>
+        <title>Evaluation</title>
+        <para>
+          On the <code>workstation</code> machine, run the <code>lab</code> command to grade your work.
+          Correct any reported failures and rerun the script until successful.
+        </para>
+      </formalpara>
+      <screen><prompt>[student@workstation ~]$ </prompt><userinput>lab auth-review grade</userinput></screen>
+
+      <formalpara>
+        <title>Finish</title>
+        <para>
+          On the <code>workstation</code> machine, use the <code>lab</code> command to complete this exercise.
+          This is important to ensure that resources from previous exercises do not impact upcoming exercises.
+        </para>
+      </formalpara>
+      <screen><prompt>[student@workstation ~]$ </prompt><userinput>lab auth-review finish</userinput></screen>
+    </taskrelated>
+  </task>
+  <para>
+    This concludes the guided exercise.
+  </para>
+</section>
