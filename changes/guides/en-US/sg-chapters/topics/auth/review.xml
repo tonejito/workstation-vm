@@ -362,6 +362,9 @@ clusterrole.rbac.authorization.k8s.io/self-provisioner added: "managers"</screen
             <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc login -u leader -p 'L@bR3v!ew'</userinput>
 Login successful.
 <emphasis>...output omitted...</emphasis></screen>
+            <para>
+              The user who creates a project is automatically assigned the <code>admin</code> role on the project.
+            </para>
             <screen><prompt>[student@workstation ~]$ </prompt><userinput>oc new-project auth-review</userinput>
 Now using project "auth-review" on server "https://api.ocp4.example.com:6443".
 <emphasis>...output omitted...</emphasis></screen>

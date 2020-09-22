@@ -237,6 +237,25 @@ function lab_grade {
     print_PASS
   fi
 
+  #Verify the 'leader' user has the 'admin' role on the 'auth-review' project
+  #This role is automatically assigned to the user who creates the project
+  pad2 "The 'leader' user has the 'admin' role on the 'auth-review' project"
+  local ROLE_LEADER_ADMIN="false"
+  for BINDING in $(oc get rolebindings.rbac.authorization.k8s.io -o name -n auth-review)
+  do
+    if [ "$(oc get ${BINDING} -n auth-review -o jsonpath='{.roleRef.name}:{.subjects[?(@.kind=="User")].name}')" == "admin:leader" ]
+    then
+      ROLE_LEADER_ADMIN="true"
+      break
+    fi
+  done
+  if [ "${ROLE_LEADER_ADMIN}" == "true" ]
+  then
+    print_PASS
+  else
+    print_FAIL
+  fi
+
   #Verify that the group developers exists
   pad2 "The 'developers' group exists"
   if ! oc get group developers
