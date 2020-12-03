@@ -13,89 +13,57 @@
         value: angelesphillips
   tasks:
     - name: Install software
-      dnf:
+      yum:
         name:
-          - gnome-tweaks
-          - python3-psutil
+          - python-psutil
+          - gnome-tweak-tool
         state: latest
 
     - name: Make Regular Directories
       file:
         path: "{{ item }}"
         state: directory
-        owner: "{{ ansible_env['USERNAME'] }}"
-        group: "{{ ansible_env['USERNAME'] }}"
-        mode: 0775
+        owner: student
+        group: student
+        mode: '0775'
       loop:
-        - ~{{ ansible_env['USERNAME'] }}/bin
+        - /home/student/bin
 
     - name: Make Secure Directories
       file:
         path: "{{ item }}"
         state: directory
-        owner: "{{ ansible_env['USERNAME'] }}"
-        group: "{{ ansible_env['USERNAME'] }}"
-        mode: 0700
+        owner: student
+        group: student
+        mode: '0700'
       loop:
-        - ~{{ ansible_env['USERNAME'] }}/.config
+        - /home/student/.config
 
     - name: Configure aliases
       blockinfile:
-        path: ~{{ ansible_env['USERNAME'] }}/.bashrc
+        path: /home/student/.bashrc
         marker: "# {mark} ANSIBLE MANAGED BLOCK ALIASES"
         block: "{{ lookup('file', 'files/bashrc_aliases') }}"
-        owner: "{{ ansible_env['USERNAME'] }}"
-        group: "{{ ansible_env['USERNAME'] }}"
-        mode: 0644
+        owner: student
+        group: student
+        mode: '0644'
         state: present
 
-    # No longer works
-    #- name: Set display resolution to 1280 x 1024
-    #  copy:
-    #    src: files/monitors.xml
-    #    dest: ~{{ ansible_env['USERNAME'] }}/.config/
-    #    owner: "{{ ansible_env['USERNAME'] }}"
-    #    group: "{{ ansible_env['USERNAME'] }}"
-    #    mode: 0600
+    - name: Copy my-gsettings.sh
+      copy:
+        src: files/my-gsettings.sh
+        dest: /home/student/bin/my-gsettings.sh
+        owner: student
+        group: student
+        mode: '0755'
 
-    - name: Use 12-hour clock format instead of 24-hour
+    - name: Run my-gsettings.sh
       become: true
-      become_user: "{{ ansible_env['USERNAME'] }}"
-      dconf:
-        key: "/org/gnome/desktop/interface/clock-format"
-        value: "'12h'"
-
-    - name: Display seconds in the top-bar clock
-      become: true
-      become_user: "{{ ansible_env['USERNAME'] }}"
-      dconf:
-        key: "/org/gnome/desktop/interface/clock-show-seconds"
-        value: "true"
-
-    - name: Enable the gnome-tweaks extension that shows the window list
-      become: true
-      become_user: "{{ ansible_env['USERNAME'] }}"
-      dconf:
-        key: "/org/gnome/shell/enabled-extensions"
-        value: "['window-list@gnome-shell-extensions.gcampax.github.com']"
-
-    - name: Turn off keyboard repeats
-      become: true
-      become_user: "{{ ansible_env['USERNAME'] }}"
-      dconf:
-        key: "/org/gnome/desktop/peripherals/keyboard/repeat"
-        value: "false"
-
-    - name: Set favorites
-      become: true
-      become_user: "{{ ansible_env['USERNAME'] }}"
-      dconf:
-        key: "/org/gnome/shell/favorite-apps"
-        value: "['firefox.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop']"
+      become_user: student
+      changed_when: false
+      command: /home/student/bin/my-gsettings.sh
 
     - name: Configure basic git settings
-      become: true
-      become_user: "{{ ansible_env['USERNAME'] }}"
       git_config:
         scope: global
         name: "{{ item['name'] }}"
@@ -103,60 +71,12 @@
       loop: "{{ git }}"
       tags: git
 
-    # Customize vim, nano, and gedit to use:
-    # - tabs instead of spaces
-    # - tabs = 2 spaces
-    # - auto indent
     - name: Customize .vimrc
       become: true
-      become_user: "{{ item }}"
+      become_user: student
       copy:
         content: "set ai et ts=2 sts=2 sw=2 colorcolumn=80"
-        dest: ~{{ item }}/.vimrc
-        owner: "{{ item }}"
-        group: "{{ item }}"
-        mode: 0644
-      loop:
-        - root
-        - devops
-        - student
-
-    - name: Customize .nanorc
-      become: true
-      become_user: "{{ item }}"
-      copy:
-        content: |
-          set tabsize 2
-          set tabstospaces
-          set autoindent
-        dest: ~{{ item }}/.nanorc
-        owner: "{{ item }}"
-        group: "{{ item }}"
-        mode: 0644
-      loop:
-        - root
-        - devops
-        - student
-
-    - name: Configure gedit settings
-      become: true
-      become_user: "{{ item[0] }}"
-      vars:
-        gedit_prefs:
-          - key: /org/gnome/gedit/preferences/editor/insert-spaces
-            value: "true"
-          - key: /org/gnome/gedit/preferences/editor/tabs-size
-            value: "uint32 2"
-          - key: /org/gnome/gedit/preferences/editor/auto-indent
-            value: "true" 
-        users:
-          - devops
-          - student
-      dconf:
-        key: "{{ item[1]['key'] }}"
-        value: "{{ item[1]['value'] }}"
-      with_nested:
-        - "{{ users }}"
-        - "{{ gedit_prefs }}"
-      loop_control:
-        label: Configuring {{ item[1]['key'] }} for {{ item[0] }}.
+        dest: /home/student/.vimrc
+        owner: student
+        group: student
+        mode: '0644'
